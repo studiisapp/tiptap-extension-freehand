@@ -1,0 +1,25 @@
+{
+    "name": "@studiis/tiptap-extension-freehand",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+      "dev": "vite --config example/vite.config.ts --open",
+      "build": "tsc -p tsconfig.json && vite build --config example/vite.config.ts",
+      "preview": "vite preview --config example/vite.config.ts"
+    },
+    "dependencies": {
+      "@tiptap/core": "^2.11.5",
+      "@tiptap/react": "^2.11.5",
+      "perfect-freehand": "^1.2.2",
+      "react": "^19.1.0",
+      "react-dom": "^19.1.1"
+    },
+    "devDependencies": {
+      "@types/react": "19.0.10",
+      "@types/react-dom": "^19.1.1",
+      "typescript": "^5.8.3",
+      "vite": "^7.1.5",
+      "@vitejs/plugin-react": "^4.2.0"
+    }
+  }
