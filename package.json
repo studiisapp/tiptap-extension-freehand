@@ -1,29 +1,81 @@
 {
   "name": "@studiis/tiptap-extension-freehand",
   "version": "0.1.0",
-  "private": true,
+  "description": "A TipTap v3 extension to draw freehand on top of your editor (global overlay or block).",
+  "author": "studiis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/studiisapp/tiptap-extension-freehand.git"
+  },
+  "homepage": "https://github.com/studiisapp/tiptap-extension-freehand",
+  "bugs": {
+    "url": "https://github.com/studiisapp/tiptap-extension-freehand/issues"
+  },
   "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "tiptap",
+    "tiptap-extension",
+    "freehand",
+    "drawing",
+    "canvas",
+    "prosemirror",
+    "editor"
+  ],
   "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsup src/index.ts --dts --format esm,cjs --sourcemap",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
     "dev": "vite --config example/vite.config.ts --open",
-    "build": "tsc -p tsconfig.json && vite build --config example/vite.config.ts",
-    "preview": "vite preview --config example/vite.config.ts"
+    "build:example": "vite build --config example/vite.config.ts",
+    "preview:example": "vite preview --config example/vite.config.ts"
+  },
+  "peerDependencies": {
+    "@tiptap/core": "^3.0.0",
+    "@tiptap/react": "^3.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tiptap/starter-kit": {
+      "optional": true
+    }
   },
   "dependencies": {
-    "@tiptap/core": "^3.4.1",
-    "@tiptap/react": "^3.4.1",
-    "@tiptap/starter-kit": "^3.4.1",
-    "perfect-freehand": "^1.2.2",
-    "prosemirror-state": "^1.4.3",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.1"
+    "perfect-freehand": "^1.2.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.2.4",
-    "@types/node": "^20.19.0",
-    "@types/react": "19.0.10",
+    "@tiptap/core": "^3.0.0",
+    "@tiptap/pm": "^3.0.0",
+    "@tiptap/react": "^3.0.0",
+    "@tiptap/starter-kit": "^3.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@types/react": "^19.0.10",
     "@types/react-dom": "^19.1.1",
-    "@vitejs/plugin-react": "^5.0.2",
-    "typescript": "^5.8.3",
-    "vite": "^7.1.5"
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite-tsconfig-paths": "^4.4.1",
+    "tsup": "^8.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

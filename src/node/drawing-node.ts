@@ -1,6 +1,8 @@
 import { mergeAttributes, Node } from "@tiptap/core";
+import type { Node as PMNode } from "@tiptap/pm/model";
+import type { EditorState, Transaction } from "@tiptap/pm/state";
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import type { BrushPreset, DrawingOptions } from "../types";
+import type { BrushPreset, DrawingFeatures, DrawingOptions } from "../types";
 import { DrawingView } from "./drawing-view";
 
 declare module "@tiptap/core" {
@@ -54,10 +56,12 @@ const defaultBrushes: Record<string, BrushPreset> = {
 	},
 };
 
-function findOverlayPos(state: any, typeName: string) {
-	let found: { pos: number; node: any } | null = null;
-	state.doc.descendants((node: any, pos: number) => {
-		if (node.type.name === typeName && node.attrs.overlay) {
+type OverlayHit = { pos: number; node: PMNode } | null;
+
+function findOverlayPos(state: EditorState, typeName: string): OverlayHit {
+	let found: OverlayHit = null;
+	(state.doc as PMNode).descendants((node: PMNode, pos: number) => {
+		if (node.type.name === typeName && (node.attrs as any)?.overlay) {
 			found = { pos, node };
 			return false;
 		}
@@ -80,7 +84,7 @@ export const DrawingNode = Node.create<DrawingOptions>({
 				straightenOnHold: false,
 				angleSnap: false,
 				globalOverlay: false,
-			},
+			} as DrawingFeatures,
 			brushes: defaultBrushes,
 		};
 	},
@@ -114,8 +118,8 @@ export const DrawingNode = Node.create<DrawingOptions>({
 		if (!globalOverlay) return;
 
 		let hasOverlay = false;
-		editor.state.doc.descendants((n) => {
-			if (n.type.name === this.name && n.attrs.overlay) {
+		(editor.state.doc as PMNode).descendants((n: PMNode) => {
+			if (n.type.name === this.name && (n.attrs as any)?.overlay) {
 				hasOverlay = true;
 				return false;
 			}
@@ -124,8 +128,8 @@ export const DrawingNode = Node.create<DrawingOptions>({
 
 		if (!hasOverlay) {
 			const root = editor.view.dom as HTMLElement;
-			const width = root.clientWidth || 800;
-			const height = root.scrollHeight || 1200;
+			const width = root?.clientWidth || 800;
+			const height = root?.scrollHeight || 1200;
 
 			editor
 				.chain()
@@ -145,58 +149,65 @@ export const DrawingNode = Node.create<DrawingOptions>({
 	addCommands() {
 		return {
 			insertDrawing:
-				(attrs) =>
+				(attrs?: Record<string, any>) =>
 				({ chain, state }) => {
-					const pos = state.selection.$to.pos;
+					const pos = (state as EditorState).selection.to;
 					return chain().insertContentAt(pos, { type: this.name, attrs }).run();
 				},
 
 			clearDrawing:
 				() =>
 				({ state, tr, dispatch }) => {
-					const overlay = findOverlayPos(state, this.name);
-					if (overlay) {
-						const attrs = { ...overlay.node.attrs, paths: [] };
-						if (dispatch)
-							dispatch(tr.setNodeMarkup(overlay.pos, undefined, attrs));
-						return true;
-					}
-					return false;
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (!hit) return false;
+					const attrs = { ...(hit.node.attrs as any), paths: [] as any[] };
+					if (dispatch)
+						(dispatch as (t: Transaction) => void)(
+							(tr as Transaction).setNodeMarkup(hit.pos, undefined, attrs),
+						);
+					return true;
 				},
 
 			setDrawingTool:
 				(tool: string) =>
 				({ state, tr, dispatch }) => {
-					const overlay = findOverlayPos(state, this.name);
-					if (overlay) {
-						const attrs = { ...overlay.node.attrs, tool, active: true };
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (hit) {
+						const attrs = { ...(hit.node.attrs as any), tool, active: true };
 						if (dispatch)
-							dispatch(tr.setNodeMarkup(overlay.pos, undefined, attrs));
+							(dispatch as (t: Transaction) => void)(
+								(tr as Transaction).setNodeMarkup(hit.pos, undefined, attrs),
+							);
 						return true;
 					}
-					if (dispatch) dispatch(tr.setMeta("noop", true));
+					if (dispatch)
+						(dispatch as (t: Transaction) => void)(tr as Transaction);
 					return true;
 				},
 
 			enableGlobalDrawing:
 				() =>
 				({ state, tr, dispatch }) => {
-					const overlay = findOverlayPos(state, this.name);
-					if (!overlay) return false;
-					const attrs = { ...overlay.node.attrs, active: true };
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (!hit) return false;
+					const attrs = { ...(hit.node.attrs as any), active: true };
 					if (dispatch)
-						dispatch(tr.setNodeMarkup(overlay.pos, undefined, attrs));
+						(dispatch as (t: Transaction) => void)(
+							(tr as Transaction).setNodeMarkup(hit.pos, undefined, attrs),
+						);
 					return true;
 				},
 
 			disableGlobalDrawing:
 				() =>
 				({ state, tr, dispatch }) => {
-					const overlay = findOverlayPos(state, this.name);
-					if (!overlay) return false;
-					const attrs = { ...overlay.node.attrs, active: false };
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (!hit) return false;
+					const attrs = { ...(hit.node.attrs as any), active: false };
 					if (dispatch)
-						dispatch(tr.setNodeMarkup(overlay.pos, undefined, attrs));
+						(dispatch as (t: Transaction) => void)(
+							(tr as Transaction).setNodeMarkup(hit.pos, undefined, attrs),
+						);
 					return true;
 				},
 		};
