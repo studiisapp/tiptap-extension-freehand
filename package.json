@@ -1,6 +1,6 @@
 {
   "name": "@studiis/tiptap-extension-freehand",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A TipTap v3 extension to draw freehand on top of your editor (global overlay or block).",
   "author": "studiis",
   "license": "MIT",
