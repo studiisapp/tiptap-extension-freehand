@@ -1,10 +1,17 @@
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { getStroke } from "perfect-freehand";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import type { BrushPreset } from "../types";
 
 type Point = { x: number; y: number; pressure?: number };
 type Path = {
+	id: string;
 	points: Point[];
 	color: string;
 	size: number;
@@ -16,6 +23,12 @@ type Paths = Path[];
 const HOLD_MS = 350;
 const STILL_EPS = 2;
 const MIN_LINE_LEN = 24;
+
+function uuid() {
+	return typeof crypto !== "undefined" && "randomUUID" in crypto
+		? crypto.randomUUID()
+		: Math.random().toString(36).slice(2);
+}
 
 function drawPaths(
 	ctx: CanvasRenderingContext2D,
@@ -50,8 +63,9 @@ function drawPaths(
 		ctx.globalCompositeOperation = preset.composite;
 		ctx.beginPath();
 		ctx.moveTo(outline[0][0], outline[0][1]);
-		for (let i = 1; i < outline.length; i++)
+		for (let i = 1; i < outline.length; i++) {
 			ctx.lineTo(outline[i][0], outline[i][1]);
+		}
 		ctx.closePath();
 
 		const alpha = Math.max(
@@ -85,8 +99,19 @@ export function DrawingView(props: NodeViewProps) {
 	const isGlobal = !!(features.globalOverlay && overlay);
 
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
-	const [paths, setPaths] = useState<Paths>(node.attrs.paths || []);
+
 	const [drawing, setDrawing] = useState<Path | null>(null);
+
+	useEffect(() => {
+		const existing: Paths = (node.attrs.paths as Paths) || [];
+		if (!existing.length) return;
+		if (existing.every((p) => p.id)) return;
+
+		const fixed = existing.map((p) => (p.id ? p : { ...p, id: uuid() }));
+		queueMicrotask(() => {
+			updateAttributes({ paths: fixed });
+		});
+	}, [node.attrs.paths, updateAttributes]);
 
 	const straightenOnHold = !!features.straightenOnHold;
 	const angleSnapStep = useMemo(() => {
@@ -110,19 +135,21 @@ export function DrawingView(props: NodeViewProps) {
 			if (w !== prevW || h !== prevH) {
 				prevW = w;
 				prevH = h;
-				updateAttributes({ width: w, height: h });
+				queueMicrotask(() => {
+					updateAttributes({ width: w, height: h });
+				});
 			}
 		};
 
 		applyDims();
 
-		const ro = new ResizeObserver(() => applyDims());
+		const ro = new ResizeObserver(applyDims);
 		ro.observe(root);
 
-		const mo = new MutationObserver(() => applyDims());
+		const mo = new MutationObserver(applyDims);
 		mo.observe(root, { childList: true, subtree: true, attributes: false });
 
-		const onScroll = () => applyDims();
+		const onScroll = () => requestAnimationFrame(applyDims);
 		root.addEventListener("scroll", onScroll, { passive: true });
 
 		return () => {
@@ -145,30 +172,19 @@ export function DrawingView(props: NodeViewProps) {
 
 		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.scale(dpr, dpr);
+
+		const committedPaths: Paths = (node.attrs.paths as Paths) || [];
 		drawPaths(
 			ctx,
-			[...paths, ...(drawing ? [drawing] : [])],
+			[...committedPaths, ...(drawing ? [drawing] : [])],
 			smoothing,
 			brushes,
 		);
-	}, [paths, drawing, width, height, smoothing, brushes]);
-
-	useEffect(() => {
-		updateAttributes({ paths });
-	}, [paths]);
+	}, [node.attrs.paths, drawing, width, height, smoothing, brushes]);
 
 	const holdTimerRef = useRef<number | null>(null);
 	const lastPointRef = useRef<Point | null>(null);
 	const snappedRef = useRef<boolean>(false);
-
-	function toCanvasPoint(e: React.PointerEvent) {
-		const canvas = canvasRef.current!;
-		const rect = canvas.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
-		const pressure = e.pressure && e.pressure > 0 ? e.pressure : 0.5;
-		return { x, y, pressure };
-	}
 
 	function clearHoldTimer() {
 		if (holdTimerRef.current) {
@@ -182,6 +198,15 @@ export function DrawingView(props: NodeViewProps) {
 		holdTimerRef.current = window.setTimeout(() => {
 			trySnapToLine();
 		}, HOLD_MS);
+	}
+
+	function toCanvasPoint(e: React.PointerEvent) {
+		const canvas = canvasRef.current!;
+		const rect = canvas.getBoundingClientRect();
+		const x = e.clientX - rect.left;
+		const y = e.clientY - rect.top;
+		const pressure = e.pressure && e.pressure > 0 ? e.pressure : 0.5;
+		return { x, y, pressure };
 	}
 
 	function trySnapToLine() {
@@ -232,6 +257,7 @@ export function DrawingView(props: NodeViewProps) {
 	}
 
 	function onPointerDown(e: React.PointerEvent) {
+		if (!active) return;
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -240,18 +266,18 @@ export function DrawingView(props: NodeViewProps) {
 		snappedRef.current = false;
 		lastPointRef.current = p;
 		setDrawing({
+			id: uuid(),
 			points: [p],
 			color,
 			size,
 			opacity,
 			tool,
 		});
-
 		armHoldTimer();
 	}
 
 	function onPointerMove(e: React.PointerEvent) {
-		if (!drawing) return;
+		if (!drawing || !active) return;
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -289,23 +315,37 @@ export function DrawingView(props: NodeViewProps) {
 		if (dist > STILL_EPS) armHoldTimer();
 	}
 
+	const commitStroke = useCallback(
+		(stroke: Path) => {
+			const existing: Paths = (node.attrs.paths as Paths) || [];
+			if (existing.some((p) => p.id === stroke.id)) return;
+			const next = [...existing, stroke];
+			queueMicrotask(() => {
+				updateAttributes({ paths: next });
+			});
+		},
+		[node.attrs.paths, updateAttributes],
+	);
+
 	function finishStroke(e: React.PointerEvent) {
 		(e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
 		clearHoldTimer();
 		if (!drawing) return;
-		setPaths((prev) => [...prev, drawing!]);
+		commitStroke(drawing);
 		setDrawing(null);
 		snappedRef.current = false;
 		lastPointRef.current = null;
 	}
 
 	function onPointerUp(e: React.PointerEvent) {
+		if (!active) return;
 		e.preventDefault();
 		e.stopPropagation();
 		finishStroke(e);
 	}
 
 	function onPointerCancel(e: React.PointerEvent) {
+		if (!active) return;
 		e.preventDefault();
 		e.stopPropagation();
 		(e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
@@ -323,7 +363,7 @@ export function DrawingView(props: NodeViewProps) {
 				zIndex: 10,
 			}
 		: {
-				pointerEvents: "auto",
+				pointerEvents: active ? "auto" : "none",
 			};
 
 	return (
