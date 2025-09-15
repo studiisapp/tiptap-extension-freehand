@@ -1,105 +1,95 @@
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { useEffect } from "react";
 import { DrawingNode } from "tiptap-extension-freehand";
 
 export function App() {
 	const editor = useEditor({
-		extensions: [StarterKit, DrawingNode],
+		extensions: [
+			StarterKit,
+			DrawingNode.configure({
+				features: {
+					globalOverlay: true,
+					straightenOnHold: false,
+					angleSnap: true,
+				},
+				brushes: {
+					pen: {
+						composite: "source-over",
+						thinning: 0.6,
+						simulatePressure: true,
+						sizeMul: 1.0,
+						opacityMul: 1.0,
+					},
+					marker: {
+						composite: "source-over",
+						thinning: 0.0,
+						simulatePressure: false,
+						sizeMul: 2.0,
+						opacityMul: 0.95,
+					},
+					highlighter: {
+						composite: "multiply",
+						thinning: 0.0,
+						simulatePressure: false,
+						sizeMul: 3.0,
+						opacityMul: 0.25,
+					},
+					eraser: {
+						composite: "destination-out",
+						thinning: 0.0,
+						simulatePressure: false,
+						sizeMul: 1.8,
+						opacityMul: 1.0,
+					},
+				},
+			}),
+		],
 		content: `
-      <p>Text above</p>
-      <div data-type="drawing"></div>
-      <p>Text below</p>
+      <h2>Endless Board</h2>
+      ${Array.from({ length: 20 })
+				.map(() => `<p>Draw everywhere …</p>`)
+				.join("")}
     `,
 	});
 
+	useEffect(() => {
+		if (!editor) return;
+		editor.commands.setDrawingTool("pen");
+		editor.commands.enableGlobalDrawing();
+	}, [editor]);
+
 	if (!editor) return null;
 
-	function updateDrawingAttrs(attrs: Record<string, any>) {
-		const { from, to } = editor.state.selection;
-
-		editor.state.doc.nodesBetween(from, to, (node, pos) => {
-			if (node.type.name === "drawing") {
-				editor
-					.chain()
-					.setNodeSelection(pos)
-					.updateAttributes("drawing", attrs)
-					.run();
-			}
-		});
-	}
-
 	return (
-		<div
-			style={{
-				fontFamily: "Inter, system-ui, sans-serif",
-				padding: 24,
-				display: "grid",
-				gap: 16,
-			}}
-		>
-			<h1 style={{ margin: 0 }}>Tiptap Freehand Demo</h1>
-
-			<div
-				style={{
-					display: "flex",
-					gap: 8,
-					flexWrap: "wrap",
-					alignItems: "center",
-				}}
-			>
-				<button
-					onClick={() =>
-						editor.commands.insertDrawing({ width: 800, height: 400 })
-					}
-					style={{
-						padding: "8px 12px",
-						borderRadius: 12,
-						border: "1px solid #e5e7eb",
-						cursor: "pointer",
-					}}
-				>
-					Insert Drawing
+		<div style={{ padding: 24 }}>
+			<div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+				<button onClick={() => editor.commands.setDrawingTool("pen")}>
+					Pen
 				</button>
-
-				<button
-					onClick={() => editor.commands.clearDrawing()}
-					style={{
-						padding: "8px 12px",
-						borderRadius: 12,
-						border: "1px solid #e5e7eb",
-						cursor: "pointer",
-					}}
-				>
-					Clear Drawing
+				<button onClick={() => editor.commands.setDrawingTool("marker")}>
+					Marker
 				</button>
-
-				<input
-					type="color"
-					defaultValue="#000000"
-					onChange={(e) => updateDrawingAttrs({ color: e.target.value })}
-					style={{ cursor: "pointer" }}
-				/>
-
-				<label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-					Size:
-					<input
-						type="range"
-						min={1}
-						max={50}
-						defaultValue={8}
-						onChange={(e) =>
-							updateDrawingAttrs({ size: parseInt(e.target.value) })
-						}
-					/>
-				</label>
+				<button onClick={() => editor.commands.setDrawingTool("highlighter")}>
+					Highlighter
+				</button>
+				<button onClick={() => editor.commands.setDrawingTool("eraser")}>
+					Eraser
+				</button>
+				<button onClick={() => editor.commands.enableGlobalDrawing()}>
+					Freehand on
+				</button>
+				<button onClick={() => editor.commands.disableGlobalDrawing()}>
+					Freehand off
+				</button>
 			</div>
-
 			<div
 				style={{
 					border: "1px solid #e5e7eb",
 					borderRadius: 16,
 					padding: 16,
 					background: "#fafafa",
+					position: "relative",
 				}}
 			>
 				<EditorContent editor={editor} />

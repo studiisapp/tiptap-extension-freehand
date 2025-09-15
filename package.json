@@ -13,6 +13,7 @@
     "@tiptap/react": "^3.4.1",
     "@tiptap/starter-kit": "^3.4.1",
     "perfect-freehand": "^1.2.2",
+    "prosemirror-state": "^1.4.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.1"
   },
