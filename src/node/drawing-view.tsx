@@ -1,4 +1,4 @@
-import type { NodeViewProps } from "@tiptap/react";
+import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { getStroke } from "perfect-freehand";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { BrushPreset } from "../types";
@@ -327,7 +327,10 @@ export function DrawingView(props: NodeViewProps) {
 			};
 
 	return (
-		<div style={wrapperStyle} data-overlay={isGlobal ? "true" : "false"}>
+		<NodeViewWrapper
+			style={wrapperStyle}
+			data-overlay={isGlobal ? "true" : "false"}
+		>
 			<canvas
 				ref={canvasRef}
 				width={width}
@@ -355,6 +358,6 @@ export function DrawingView(props: NodeViewProps) {
 				}}
 				data-type="drawing"
 			/>
-		</div>
+		</NodeViewWrapper>
 	);
 }
