@@ -13,6 +13,7 @@ declare module "@tiptap/core" {
 			setDrawingTool: (tool: string) => ReturnType;
 			enableGlobalDrawing: () => ReturnType;
 			disableGlobalDrawing: () => ReturnType;
+			setDrawingColor: (color: string) => ReturnType;
 		};
 	}
 }
@@ -208,6 +209,18 @@ export const DrawingNode = Node.create<DrawingOptions>({
 						(dispatch as (t: Transaction) => void)(
 							(tr as Transaction).setNodeMarkup(hit.pos, undefined, attrs),
 						);
+					return true;
+				},
+			setDrawingColor:
+				(color: string) =>
+				({ state, tr, dispatch }) => {
+					const hit = findOverlayPos(state as EditorState, this.name);
+
+					if (!hit) return false;
+					const attrs = { ...hit.node.attrs, color };
+					if (dispatch) {
+						dispatch(tr.setNodeMarkup(hit.pos, undefined, attrs));
+					}
 					return true;
 				},
 		};

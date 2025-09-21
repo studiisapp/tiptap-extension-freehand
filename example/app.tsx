@@ -82,6 +82,9 @@ export function App() {
 				<button onClick={() => editor.commands.disableGlobalDrawing()}>
 					Freehand off
 				</button>
+				<button onClick={() => editor.commands.setDrawingColor("#FF2027")}>
+					Switch Color
+				</button>
 			</div>
 			<div
 				style={{
