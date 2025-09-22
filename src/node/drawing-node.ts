@@ -14,6 +14,9 @@ declare module "@tiptap/core" {
 			enableGlobalDrawing: () => ReturnType;
 			disableGlobalDrawing: () => ReturnType;
 			setDrawingColor: (color: string) => ReturnType;
+			setBrushSize: (size: number) => ReturnType;
+			increaseBrushSize: (step?: number) => ReturnType;
+			decreaseBrushSize: (step?: number) => ReturnType;
 		};
 	}
 }
@@ -69,6 +72,13 @@ function findOverlayPos(state: EditorState, typeName: string): OverlayHit {
 		return true;
 	});
 	return found;
+}
+
+const MIN_BRUSH_SIZE = 1;
+const MAX_BRUSH_SIZE = 64;
+
+function clampSize(v: number) {
+	return Math.max(MIN_BRUSH_SIZE, Math.min(MAX_BRUSH_SIZE, v));
 }
 
 export const DrawingNode = Node.create<DrawingOptions>({
@@ -218,6 +228,47 @@ export const DrawingNode = Node.create<DrawingOptions>({
 
 					if (!hit) return false;
 					const attrs = { ...hit.node.attrs, color };
+					if (dispatch) {
+						dispatch(tr.setNodeMarkup(hit.pos, undefined, attrs));
+					}
+					return true;
+				},
+
+			setBrushSize:
+				(size: number) =>
+				({ state, tr, dispatch }) => {
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (!hit) return false;
+					const attrs = { ...hit.node.attrs, size: clampSize(size) };
+					if (dispatch) {
+						dispatch(tr.setNodeMarkup(hit.pos, undefined, attrs));
+					}
+					return true;
+				},
+			increaseBrushSize:
+				(step = 2) =>
+				({ state, tr, dispatch }) => {
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (!hit) return false;
+					const current = (hit.node.attrs as any)?.size ?? 8;
+					const next = clampSize(current + step);
+					if (next === current) return true;
+					const attrs = { ...hit.node.attrs, size: next };
+					if (dispatch) {
+						dispatch(tr.setNodeMarkup(hit.pos, undefined, attrs));
+					}
+					return true;
+				},
+
+			decreaseBrushSize:
+				(step = 2) =>
+				({ state, tr, dispatch }) => {
+					const hit = findOverlayPos(state as EditorState, this.name);
+					if (!hit) return false;
+					const current = (hit.node.attrs as any)?.size ?? 8;
+					const next = clampSize(current - step);
+					if (next === current) return true;
+					const attrs = { ...hit.node.attrs, size: next };
 					if (dispatch) {
 						dispatch(tr.setNodeMarkup(hit.pos, undefined, attrs));
 					}

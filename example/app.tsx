@@ -10,7 +10,7 @@ export function App() {
 			DrawingNode.configure({
 				features: {
 					globalOverlay: true,
-					straightenOnHold: false,
+					straightenOnHold: true,
 					angleSnap: true,
 				},
 				brushes: {
@@ -84,6 +84,15 @@ export function App() {
 				</button>
 				<button onClick={() => editor.commands.setDrawingColor("#FF2027")}>
 					Switch Color
+				</button>
+				<button onClick={() => editor.commands.increaseBrushSize()}>
+					Increase Brush Size
+				</button>
+				<button onClick={() => editor.commands.decreaseBrushSize()}>
+					Decrease Brush Size
+				</button>
+				<button onClick={() => editor.commands.setBrushSize(64)}>
+					Set Brush Size
 				</button>
 			</div>
 			<div
